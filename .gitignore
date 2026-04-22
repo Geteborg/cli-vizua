@@ -4,3 +4,5 @@ __pycache__/
 .idea/
 .vscode/
 artifacts/
+src/vizua.egg-info
+shopping_trends.csv
