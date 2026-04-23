@@ -23,7 +23,7 @@ def advance_profilling(df: pd.DataFrame, results: dict) -> dict:
         advanced_results["skewness"] = skewness.to_dict()
 
         quantiles = df[num_columns].quantile([0.25, 0.75])
-        
+
         iqr = quantiles.loc[0.75] - quantiles.loc[0.25]
 
         lower_bound = quantiles.loc[0.25] - 1.5 * iqr
@@ -32,13 +32,13 @@ def advance_profilling(df: pd.DataFrame, results: dict) -> dict:
         outliers = {}
 
         for column_name in num_columns:
-            outliers[column_name] = df[(df[column_name] < lower_bound[column_name]) | (df[column_name] > upper_bound[column_name])].index.tolist()
+            outliers[column_name] = df[
+                (df[column_name] < lower_bound[column_name])
+                | (df[column_name] > upper_bound[column_name])
+            ].index.tolist()
 
         advanced_results["outliers"] = outliers
 
     results.update(advanced_results)
-        
 
-    
-    
     return results

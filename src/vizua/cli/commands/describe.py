@@ -12,20 +12,18 @@ def describe(file_path: str) -> None:
     try:
         df = read_csv_file(file_path)
     except Exception as e:
-        typer.echo (f"Ошибка: {e}")
+        typer.echo(f"Ошибка: {e}")
         raise typer.Exit(code=1)
-    
-    
+
     results = profile_dataset(df)
 
-    rows = results['basic']["rows"]
-    cols = results['basic']["cols"]
-    columns = results['basic']["columns"] 
-    dtypes = results['basic']["dtypes"]
-    missing_by_column = results['missing']["missing_by_column"]
-    duplicated_rows = results['missing']["duplicated_rows"]
-    unique_by_column = results['unique']["unique_by_column"]
-
+    rows = results["basic"]["rows"]
+    cols = results["basic"]["cols"]
+    columns = results["basic"]["columns"]
+    dtypes = results["basic"]["dtypes"]
+    missing_by_column = results["missing"]["missing_by_column"]
+    duplicated_rows = results["missing"]["duplicated_rows"]
+    unique_by_column = results["unique"]["unique_by_column"]
 
     lines = []
 
