@@ -5,7 +5,7 @@ def generate_pairs(results: dict ) -> list[dict]:
 
     
 
-    for column_name in results['columns']:
+    for column_name in results['basic']['columns']:
         
         column_is_id = False
 
@@ -14,10 +14,10 @@ def generate_pairs(results: dict ) -> list[dict]:
         if column_name_lower == "id" or column_name_lower.endswith("_id") or column_name_lower.startswith("id_") or "uuid" in column_name_lower:
             column_is_id = True
         
-        if (results['dtypes'][column_name] == 'int64' or results['dtypes'][column_name] == 'float64') and column_is_id == False:
+        if (results['basic']['dtypes'][column_name] == 'int64' or results['basic']['dtypes'][column_name] == 'float64') and not column_is_id:
             numerical_columns.append(column_name)
 
-        if results['dtypes'][column_name] == 'str' and column_is_id == False and results['unique_by_column'][column_name] > 1 and results['unique_by_column'][column_name] < 10 :
+        if results['basic']['dtypes'][column_name] == 'str' and not column_is_id and results['unique']['unique_by_column'][column_name] > 1 and results['unique']['unique_by_column'][column_name] < 10 :
             categorical_columns.append(column_name)
 
 

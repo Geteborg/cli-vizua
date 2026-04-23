@@ -18,13 +18,13 @@ def describe(file_path: str) -> None:
     
     results = profile_dataset(df)
 
-    rows = results["rows"]
-    cols = results["cols"]
-    columns = results["columns"] 
-    dtypes = results["dtypes"]
-    missing_by_column = results["missing_by_column"]
-    duplicated_rows = results["duplicated_rows"]
-    unique_by_column = results["unique_by_column"]
+    rows = results['basic']["rows"]
+    cols = results['basic']["cols"]
+    columns = results['basic']["columns"] 
+    dtypes = results['basic']["dtypes"]
+    missing_by_column = results['missing']["missing_by_column"]
+    duplicated_rows = results['missing']["duplicated_rows"]
+    unique_by_column = results['unique']["unique_by_column"]
 
 
     lines = []

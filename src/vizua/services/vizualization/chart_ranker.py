@@ -11,19 +11,19 @@ def rank_pairs(candidates : list[dict], results : dict, top_n: int) -> list[dict
             score = 0
             base = 2
 
-            if results['missing_by_column'][x] == 0 and results['missing_by_column'][y] == 0:
+            if results['missing']['missing_by_column'][x] == 0 and results['missing']['missing_by_column'][y] == 0:
                 score += 1
             
-            if results['unique_by_column'][x] >= 2 and results['unique_by_column'][x] <= 8:
+            if results['unique']['unique_by_column'][x] >= 2 and results['unique']['unique_by_column'][x] <= 8:
                 score += 3
             
-            if results['unique_by_column'][x] >= 9 and results['unique_by_column'][x] <= 15:
+            if results['unique']['unique_by_column'][x] >= 9 and results['unique']['unique_by_column'][x] <= 15:
                 score += 1
             
-            if results['unique_by_column'][x] > 15 or results['unique_by_column'][x] < 2: 
+            if results['unique']['unique_by_column'][x] > 15 or results['unique']['unique_by_column'][x] < 2: 
                 score +=-3
             
-            if results['dtypes'][y] == 'int64' or results['dtypes'][y] == 'float64':
+            if results['basic']['dtypes'][y] == 'int64' or results['basic']['dtypes'][y] == 'float64':
                 score+=2
             
             score += base
@@ -33,10 +33,10 @@ def rank_pairs(candidates : list[dict], results : dict, top_n: int) -> list[dict
             score = 0
             base = 2
 
-            if results['dtypes'][x] == 'int64' or results['dtypes'][x] == 'float64':
+            if results['basic']['dtypes'][x] == 'int64' or results['basic']['dtypes'][x] == 'float64':
                 score += 2
             
-            if results['missing_by_column'][x] == 0:
+            if results['missing']['missing_by_column'][x] == 0:
                 score += 1
             
             score += base
@@ -46,10 +46,10 @@ def rank_pairs(candidates : list[dict], results : dict, top_n: int) -> list[dict
             score = 0
             base = 2
 
-            if results['dtypes'][x] == 'int64' or results['dtypes'][x] == 'float64':
+            if results['basic']['dtypes'][x] == 'int64' or results['basic']['dtypes'][x] == 'float64':
                 score += 2
             
-            if results['missing_by_column'][x] == 0:
+            if results['missing']['missing_by_column'][x] == 0:
                 score += 1
             
             score += base
@@ -59,10 +59,10 @@ def rank_pairs(candidates : list[dict], results : dict, top_n: int) -> list[dict
             score = 0
             base = 2
 
-            if (results['dtypes'][x] == 'int64' or results['dtypes'][x] == 'float64') and (results['dtypes'][y] == 'int64' or results['dtypes'][y] == 'float64'):
+            if (results['basic']['dtypes'][x] == 'int64' or results['basic']['dtypes'][x] == 'float64') and (results['basic']['dtypes'][y] == 'int64' or results['basic']['dtypes'][y] == 'float64'):
                 score += 2
             
-            if results['missing_by_column'][x] == 0 and results['missing_by_column'][y] == 0:
+            if results['missing']['missing_by_column'][x] == 0 and results['missing']['missing_by_column'][y] == 0:
                 score += 1
 
             score += base
