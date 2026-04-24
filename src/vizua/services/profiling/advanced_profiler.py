@@ -43,5 +43,5 @@ def advanced_profiling(df: pd.DataFrame, results: dict) -> dict:
 
         advanced_results["outliers"] = outliers
 
-    results.update(advanced_results)
+    results['advanced'] = advanced_results
     return results
