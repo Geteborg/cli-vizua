@@ -2,26 +2,29 @@ import typer
 
 from vizua.infrastructure.readers.csv_reader import read_csv_file
 from vizua.services.profiling.dataset_profiler import profile_dataset
+from vizua.services.profiling.advanced_profiler import advanced_profilling
 from vizua.services.vizualization.chart_pair_generator import generate_pairs
 from vizua.services.vizualization.chart_ranker import rank_pairs
 from vizua.services.vizualization.chart_selector import select_top_candidates
 
-def visualize(file_path: str, top: int=3) -> None:
+
+def visualize(file_path: str, top: int = 3) -> None:
     """
     Читает CSV-файл и выводит топ N предложений для построения визуализаций.
     """
     try:
         df = read_csv_file(file_path)
     except Exception as e:
-        typer.echo (f"Ошибка: {e}")
+        typer.echo(f"Ошибка: {e}")
         raise typer.Exit(code=1)
-    
-    
-    results = profile_dataset(df)
+
+    sub_results = profile_dataset(df)
+
+    results = advanced_profilling(df, sub_results)
 
     candidates = generate_pairs(results)
 
-    scored_candidates = rank_pairs(candidates,results,top)
+    scored_candidates = rank_pairs(candidates, results, top)
 
     top_n_candidates = select_top_candidates(scored_candidates, top)
 

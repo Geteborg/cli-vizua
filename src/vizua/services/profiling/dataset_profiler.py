@@ -1,7 +1,11 @@
 import pandas as pd
 
+
 def profile_dataset(df: pd.DataFrame) -> dict:
     results = {}
+    basic = {}
+    missing = {}
+    unique = {}
 
     rows, cols = df.shape
 
@@ -9,14 +13,18 @@ def profile_dataset(df: pd.DataFrame) -> dict:
 
     dtypes = df.dtypes.astype(str).to_dict()
 
+    basic.update(rows, cols, columns, dtypes)
+
     missing_by_column = df.isnull().sum().to_dict()
-    
+
     duplicated_rows = int(df.duplicated().sum())
+
+    missing.update(missing_by_column, duplicated_rows)
 
     unique_by_column = df.nunique().to_dict()
 
-    results.update({'rows' : rows, 'cols' : cols, 'columns' : columns, 'dtypes' : dtypes, 'missing_by_column' : missing_by_column, 'duplicated_rows' : duplicated_rows, 'unique_by_column' : unique_by_column})
+    unique.update(unique_by_column)
 
-
+    results.update(basic, missing, unique)
 
     return results
