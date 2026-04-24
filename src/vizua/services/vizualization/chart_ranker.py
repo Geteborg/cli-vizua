@@ -1,102 +1,78 @@
 def rank_pairs(candidates: list[dict], results: dict, top_n: int) -> list[dict]:
     ranked_candidates = []
 
+    def is_numeric(col):
+        """Вспомогательная функция для проверки типа колонки."""
+        dtype = results.get("basic", {}).get("dtypes", {}).get(col, "")
+        return any(t in str(dtype).lower() for t in ["int", "float"])
+
     for candidate in candidates:
+        advanced = results.get("advanced", {})
         chart_type = candidate["chart_type"]
         x = candidate["x"]
         y = candidate["y"]
+        score = 0
+        base = 20
 
         if chart_type == "bar":
-            score = 0
-            base = 2
+            # Проверка на пропуски (безопасный доступ через get)
+            missing = results.get("missing", {}).get("missing_by_column", {})
+            if missing.get(x) == 0 and (not y or missing.get(y) == 0):
+                score += 10
 
-            if (
-                results["missing"]["missing_by_column"][x] == 0
-                and results["missing"]["missing_by_column"][y] == 0
-            ):
-                score += 1
+            # Оценка кардинальности категории
+            unique_count = results.get("unique", {}).get("unique_by_column", {}).get(x, 0)
+            if 2 <= unique_count <= 10:
+                score += 30
+            elif 11 <= unique_count <= 20:
+                score += 10
+            else:
+                score -= 50
 
-            if (
-                results["unique"]["unique_by_column"][x] >= 2
-                and results["unique"]["unique_by_column"][x] <= 8
-            ):
-                score += 3
-
-            if (
-                results["unique"]["unique_by_column"][x] >= 9
-                and results["unique"]["unique_by_column"][x] <= 15
-            ):
-                score += 1
-
-            if (
-                results["unique"]["unique_by_column"][x] > 15
-                or results["unique"]["unique_by_column"][x] < 2
-            ):
-                score += -3
-
-            if (
-                results["basic"]["dtypes"][y] == "int64"
-                or results["basic"]["dtypes"][y] == "float64"
-            ):
-                score += 2
-
-            score += base
-            candidate.update({"score": score})
+            # Для Bar-chart Y обычно должен быть числовым
+            if y and is_numeric(y):
+                score += 20
 
         elif chart_type == "histogram":
-            score = 0
-            base = 2
+            if is_numeric(x):
+                score += 20
 
-            if (
-                results["basic"]["dtypes"][x] == "int64"
-                or results["basic"]["dtypes"][x] == "float64"
-            ):
-                score += 2
+            if results.get("missing", {}).get("missing_by_column", {}).get(x) == 0:
+                score += 10
 
-            if results["missing"]["missing_by_column"][x] == 0:
-                score += 1
-
-            score += base
-            candidate.update({"score": score})
+            # Бонус за интересное распределение (асимметрия/эксцесс)
+            skew = advanced.get("skewness", {}).get(x, 0)
+            kurt = advanced.get("kurtosis", {}).get(x, 3)
+            if abs(skew) > 1 or (kurt - 3) > 0:
+                score += 25
 
         elif chart_type == "boxplot":
-            score = 0
-            base = 2
+            if is_numeric(x):
+                score += 20
 
-            if (
-                results["basic"]["dtypes"][x] == "int64"
-                or results["basic"]["dtypes"][x] == "float64"
-            ):
-                score += 2
+            if results.get("missing", {}).get("missing_by_column", {}).get(x) == 0:
+                score += 10
 
-            if results["missing"]["missing_by_column"][x] == 0:
-                score += 1
-
-            score += base
-            candidate.update({"score": score})
+            # Главная ценность Boxplot — отображение выбросов
+            outlier_info = advanced.get("outliers", {}).get(x, {})
+            if outlier_info.get("count", 0) > 0:
+                score += 40
 
         elif chart_type == "scatter":
-            score = 0
-            base = 2
+            if is_numeric(x) and is_numeric(y):
+                score += 20
 
-            if (
-                results["basic"]["dtypes"][x] == "int64"
-                or results["basic"]["dtypes"][x] == "float64"
-            ) and (
-                results["basic"]["dtypes"][y] == "int64"
-                or results["basic"]["dtypes"][y] == "float64"
-            ):
-                score += 2
+            missing = results.get("missing", {}).get("missing_by_column", {})
+            if missing.get(x) == 0 and missing.get(y) == 0:
+                score += 10
+            
+            # Корреляция Пирсона (бонус за взаимосвязь)
+            correlations = advanced.get("correlations", {})
+            if x in correlations and y in correlations[x]:
+                corr_val = correlations[x][y]
+                score += int(abs(corr_val) * 60)
 
-            if (
-                results["missing"]["missing_by_column"][x] == 0
-                and results["missing"]["missing_by_column"][y] == 0
-            ):
-                score += 1
-
-            score += base
-            candidate.update({"score": score})
-
+        candidate.update({"score": score + base})
         ranked_candidates.append(candidate)
 
     ranked_candidates = sorted(
