@@ -2,7 +2,7 @@ import typer
 
 from vizua.infrastructure.readers.csv_reader import read_csv_file
 from vizua.services.profiling.dataset_profiler import profile_dataset
-from vizua.services.profiling.advanced_profiler import advanced_profilling
+from vizua.services.profiling.advanced_profiler import advanced_profiling
 from vizua.services.vizualization.chart_pair_generator import generate_pairs
 from vizua.services.vizualization.chart_ranker import rank_pairs
 from vizua.services.vizualization.chart_selector import select_top_candidates
@@ -20,7 +20,7 @@ def visualize(file_path: str, top: int = 3) -> None:
 
     sub_results = profile_dataset(df)
 
-    results = advanced_profilling(df, sub_results)
+    results = advanced_profiling(df, sub_results)
 
     candidates = generate_pairs(results)
 

@@ -25,6 +25,8 @@ def profile_dataset(df: pd.DataFrame) -> dict:
 
     unique.update(unique_by_column)
 
-    results.update(basic, missing, unique)
+    results['basic'] = basic
+    results['missing'] = missing
+    results['unique'] = unique
 
     return results
