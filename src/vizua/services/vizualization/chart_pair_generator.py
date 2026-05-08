@@ -67,7 +67,7 @@ def generate_pairs(results: dict) -> list[dict]:
                 "x": num,
                 "y": None,
                 "title": f"Distribution by {num}",
-                "reason": "омогает оценить разброс значений и возможные выбросы.",
+                "reason": "Помогает оценить разброс значений и возможные выбросы.",
                 "source_rule": "single_numeric_boxplot",
             }
         )

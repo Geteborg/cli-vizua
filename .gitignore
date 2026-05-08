@@ -5,5 +5,5 @@ __pycache__/
 .vscode/
 artifacts/
 src/vizua.egg-info
-shopping_trends.csv
 charts/
+*.csv
