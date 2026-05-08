@@ -6,3 +6,4 @@ __pycache__/
 artifacts/
 src/vizua.egg-info
 shopping_trends.csv
+charts/
