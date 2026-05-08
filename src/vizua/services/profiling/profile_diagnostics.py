@@ -1,22 +1,28 @@
 def profile_diagnostics(results: dict) -> list[str]:
     lines = []
 
-    if results["duplicated_rows"] == 0:
+    # Извлекаем данные из вложенной структуры
+    basic = results.get("basic", {})
+    missing = results.get("missing", {})
+    unique = results.get("unique", {})
+
+    rows = basic.get("rows", 0)
+    duplicated_rows = missing.get("duplicated_rows", 0)
+    missing_by_column = missing.get("missing_by_column", {})
+    unique_by_column = unique.get("unique_by_column", {})
+    dtypes = basic.get("dtypes", {})
+
+    if duplicated_rows == 0:
         lines.append("Дубликатов строк не обнаружено")
     else:
-        lines.append(f"Обнаружено {results['duplicated_rows']} дублированных строк")
+        lines.append(f"Обнаружено {duplicated_rows} дублированных строк")
 
-    for column_name in results["missing_by_column"]:
-        missing_count = results["missing_by_column"][column_name]
-
+    for column_name, missing_count in missing_by_column.items():
         if missing_count > 0:
             lines.append(f"Колонка {column_name} имеет {missing_count} пропусков")
 
-    for column_name in results["unique_by_column"]:
-        unique_count = results["unique_by_column"][column_name]
-
+    for column_name, unique_count in unique_by_column.items():
         column_is_id = False
-
         column_name_lower = column_name.replace(" ", "_").lower()
 
         if (
@@ -27,25 +33,26 @@ def profile_diagnostics(results: dict) -> list[str]:
         ):
             column_is_id = True
 
-        if float(unique_count / results["rows"]) > 0.95 and column_is_id:
-            lines.append(
-                f'Колонка "{column_name}" похожа на идентификатор: почти все значения уникальны'
-            )
+        if rows > 0:
+            uniqueness_ratio = unique_count / rows
+            if uniqueness_ratio > 0.95 and column_is_id:
+                lines.append(
+                    f'Колонка "{column_name}" похожа на идентификатор: почти все значения уникальны'
+                )
+            elif uniqueness_ratio > 0.95 or column_is_id:
+                lines.append(
+                    f'Колонка "{column_name}" похожа на уникальный технический признак / почти все значения уникальны'
+                )
 
-        elif float(unique_count / results["rows"]) > 0.95 or column_is_id:
-            lines.append(
-                f'Колонка "{column_name}" похожа на уникальный технический признак / почти все значения уникальны'
-            )
-
-        if unique_count > 50 and results["dtypes"][column_name] == "str":
+        dtype = dtypes.get(column_name, "")
+        if unique_count > 50 and dtype == "object" or dtype == "str":
             lines.append(
                 f"Колонка {column_name} имеет высокую кардинальность: {unique_count}"
             )
 
         if (
-            unique_count < 10
-            and unique_count > 1
-            and results["dtypes"][column_name] == "str"
+            1 < unique_count < 10
+            and (dtype == "object" or dtype == "str")
         ):
             lines.append(
                 f"Колонка {column_name} подходит для сравнительных категориальных визуализаций"
@@ -54,13 +61,10 @@ def profile_diagnostics(results: dict) -> list[str]:
     num_count = 0
     str_count = 0
 
-    for column_name in results["dtypes"]:
-        if (
-            results["dtypes"][column_name] == "int64"
-            or results["dtypes"][column_name] == "float64"
-        ):
+    for column_name, dtype in dtypes.items():
+        if any(t in str(dtype).lower() for t in ["int", "float"]):
             num_count += 1
-        if results["dtypes"][column_name] == "str":
+        if any(t in str(dtype).lower() for t in ["str", "object"]):
             str_count += 1
 
     if num_count > 0:
