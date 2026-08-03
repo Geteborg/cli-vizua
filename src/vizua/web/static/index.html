@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vizua Web — ИИ-Визуализатор данных</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Plotly JS CDN -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            bg: '#000000',
+                            card: '#0a0a0a',
+                            border: '#1f1f1f',
+                            hover: '#171717',
+                            accent: '#6366f1',
+                            accentGlow: '#4f46e5',
+                            text: '#ececec',
+                            muted: '#7d7d7d'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'SF Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #000000;
+            color: #ececec;
+            font-family: 'Inter', sans-serif;
+        }
+        .glow-effect {
+            box-shadow: 0 0 25px -5px rgba(99, 102, 241, 0.15);
+        }
+        .glass-card {
+            background: #0a0a0a;
+            border: 1px solid #1f1f1f;
+        }
+        .glass-card:hover {
+            border-color: #333333;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-black text-gray-100">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-brand-border bg-black/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-bold text-white shadow-lg">
+                    v
+                </div>
+                <span class="text-xl font-bold tracking-tight">vizua<span class="text-indigo-500">.web</span></span>
+                <span class="hidden sm:inline-block px-2.5 py-0.5 text-xs font-mono rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-800/50">
+                    ENGINE v0.1.0
+                </span>
+            </div>
+
+            <!-- Header Actions -->
+            <div id="headerActions" class="flex items-center space-x-3">
+                <button onclick="triggerFileInput()" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center space-x-2 shadow-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    <span>Загрузить CSV</span>
+                </button>
+                <input type="file" id="fileInput" accept=".csv" class="hidden" onchange="handleFileSelect(event)">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Initial Dropzone (when no dataset loaded) -->
+        <div id="dropzoneSection" class="my-12">
+            <div id="dropzone" 
+                 onclick="triggerFileInput()"
+                 ondragover="handleDragOver(event)" 
+                 ondragleave="handleDragLeave(event)" 
+                 ondrop="handleDrop(event)"
+                 class="glass-card rounded-2xl border-2 border-dashed border-zinc-800 p-12 text-center cursor-pointer transition-all duration-300 hover:border-indigo-500/50 hover:bg-zinc-950/50 group">
+                
+                <div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:border-indigo-500/30 transition-transform">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                </div>
+
+                <h3 class="text-lg font-semibold text-white mb-2">Перетащите сюда CSV-файл</h3>
+                <p class="text-sm text-zinc-400 mb-6 max-w-md mx-auto">
+                    Vizua автоматически проанализирует структуру данных, выявит аномалии и сформирует топ визуализаций.
+                </p>
+
+                <div class="inline-flex items-center space-x-2 text-xs font-mono text-indigo-400 bg-indigo-950/40 border border-indigo-900/50 px-4 py-2 rounded-lg">
+                    <span>Нажмите для выбора файла</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loader overlay -->
+        <div id="loader" class="hidden my-16 text-center">
+            <div class="inline-block w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+            <p id="loaderText" class="text-sm font-mono text-zinc-400">Анализ датасета и генерация визуализаций...</p>
+        </div>
+
+        <!-- Active Dataset Dashboard Section -->
+        <div id="dashboardSection" class="hidden space-y-8">
+            
+            <!-- Dataset Header Stats Banner -->
+            <div class="glass-card rounded-xl p-6 relative overflow-hidden">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <h2 id="datasetName" class="text-2xl font-bold text-white tracking-tight">data.csv</h2>
+                            <span id="datasetIdBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">ID: ----</span>
+                        </div>
+                        <p class="text-xs text-zinc-400 mt-1">Автоматическое ИИ-профилирование выполнено</p>
+                    </div>
+
+                    <!-- Quick Action Bar -->
+                    <div class="flex items-center space-x-3">
+                        <button onclick="exportHtmlReport()" class="px-4 py-2 text-xs font-medium rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-white transition flex items-center space-x-2">
+                            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <span>Скачать HTML-отчет</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-6 border-t border-zinc-800/80">
+                    <div class="bg-zinc-950/60 p-4 rounded-lg border border-zinc-900">
+                        <div class="text-xs uppercase tracking-wider text-zinc-500 font-medium">Строк</div>
+                        <div id="statRows" class="text-2xl font-bold font-mono text-white mt-1">0</div>
+                    </div>
+                    <div class="bg-zinc-950/60 p-4 rounded-lg border border-zinc-900">
+                        <div class="text-xs uppercase tracking-wider text-zinc-500 font-medium">Колонок</div>
+                        <div id="statCols" class="text-2xl font-bold font-mono text-white mt-1">0</div>
+                    </div>
+                    <div class="bg-zinc-950/60 p-4 rounded-lg border border-zinc-900">
+                        <div class="text-xs uppercase tracking-wider text-zinc-500 font-medium">Дубликатов</div>
+                        <div id="statDuplicates" class="text-2xl font-bold font-mono text-white mt-1">0</div>
+                    </div>
+                    <div class="bg-zinc-950/60 p-4 rounded-lg border border-zinc-900">
+                        <div class="text-xs uppercase tracking-wider text-zinc-500 font-medium">Графиков</div>
+                        <div id="statChartsCount" class="text-2xl font-bold font-mono text-indigo-400 mt-1">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="flex border-b border-zinc-800 space-x-6 text-sm font-medium">
+                <button onclick="switchTab('charts')" id="tabBtn-charts" class="pb-3 border-b-2 border-indigo-500 text-indigo-400 transition flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                    <span>Интерактивные графики</span>
+                </button>
+                <button onclick="switchTab('insights')" id="tabBtn-insights" class="pb-3 border-b-2 border-transparent text-zinc-400 hover:text-white transition flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <span>ИИ-Инсайты и Анализ</span>
+                </button>
+                <button onclick="switchTab('preview')" id="tabBtn-preview" class="pb-3 border-b-2 border-transparent text-zinc-400 hover:text-white transition flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span>Таблица данных</span>
+                </button>
+            </div>
+
+            <!-- Tab Content: Charts -->
+            <div id="tabContent-charts" class="space-y-6">
+                <!-- Controls bar -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-900">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-xs text-zinc-400 font-mono">Топ графиков:</span>
+                        <input type="range" id="topRange" min="1" max="10" value="5" onchange="updateTopCharts(this.value)" class="w-32 accent-indigo-500 cursor-pointer">
+                        <span id="topRangeValue" class="text-xs font-mono font-bold text-indigo-400">5</span>
+                    </div>
+
+                    <!-- Type Filter Badges -->
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <button onclick="filterChartType('all')" class="chart-filter-btn active px-3 py-1 rounded-md bg-indigo-600 text-white font-medium">Все</button>
+                        <button onclick="filterChartType('bar')" class="chart-filter-btn px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white">Bar</button>
+                        <button onclick="filterChartType('histogram')" class="chart-filter-btn px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white">Histogram</button>
+                        <button onclick="filterChartType('boxplot')" class="chart-filter-btn px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white">Boxplot</button>
+                        <button onclick="filterChartType('scatter')" class="chart-filter-btn px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white">Scatter</button>
+                    </div>
+                </div>
+
+                <!-- Charts Container Grid -->
+                <div id="chartsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Dynamic chart cards inserted here -->
+                </div>
+            </div>
+
+            <!-- Tab Content: AI Insights -->
+            <div id="tabContent-insights" class="hidden space-y-6">
+                <div class="glass-card rounded-xl p-6 border border-zinc-800">
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <span>Выявленные наблюдения и закономерности</span>
+                    </h3>
+                    <ul id="insightsList" class="space-y-3 text-sm text-zinc-300">
+                        <!-- Dynamic list -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tab Content: Data Preview Table -->
+            <div id="tabContent-preview" class="hidden space-y-6">
+                <div class="glass-card rounded-xl p-6 overflow-x-auto border border-zinc-800">
+                    <h3 class="text-sm font-mono text-zinc-400 mb-4">ПРЕДПРОСМОТР (ПЕРВЫЕ 10 СТРОК)</h3>
+                    <table id="previewTable" class="w-full text-xs text-left text-zinc-300 font-mono">
+                        <thead class="bg-zinc-900 text-zinc-400 border-b border-zinc-800">
+                            <tr id="previewTableHead"></tr>
+                        </thead>
+                        <tbody id="previewTableBody" class="divide-y divide-zinc-900"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-brand-border py-6 mt-12 bg-black text-center text-xs text-zinc-600 font-mono">
+        VIZUA_WEB_ENGINE v0.1.0 // AUTOMATIC_DATA_VISUALIZATION_SERVICE
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        let currentDatasetId = null;
+        let currentChartsData = [];
+        let currentFilter = 'all';
+
+        function triggerFileInput() {
+            document.getElementById('fileInput').click();
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            document.getElementById('dropzone').classList.add('border-indigo-500', 'bg-zinc-950');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            document.getElementById('dropzone').classList.remove('border-indigo-500', 'bg-zinc-950');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            document.getElementById('dropzone').classList.remove('border-indigo-500', 'bg-zinc-950');
+            if (e.dataTransfer.files.length > 0) {
+                uploadFile(e.dataTransfer.files[0]);
+            }
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                uploadFile(e.target.files[0]);
+            }
+        }
+
+        async function uploadFile(file) {
+            if (!file.name.endsWith('.csv')) {
+                alert('Пожалуйста, выберите файл с расширением .csv');
+                return;
+            }
+
+            // Show loader
+            document.getElementById('dropzoneSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
+            document.getElementById('loader').classList.remove('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/v1/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Ошибка при загрузке');
+                }
+
+                const data = await res.json();
+                currentDatasetId = data.dataset_id;
+
+                // Set header info
+                document.getElementById('datasetName').textContent = data.filename;
+                document.getElementById('datasetIdBadge').textContent = `ID: ${data.dataset_id}`;
+                document.getElementById('statRows').textContent = data.rows.toLocaleString();
+                document.getElementById('statCols').textContent = data.cols;
+
+                // Populate preview table
+                renderPreviewTable(data.columns, data.preview);
+
+                // Fetch Profile & Charts
+                await fetchProfileAndCharts();
+
+            } catch (err) {
+                alert('Ошибка: ' + err.message);
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('dropzoneSection').classList.remove('hidden');
+            }
+        }
+
+        async function fetchProfileAndCharts() {
+            const top = document.getElementById('topRange').value;
+            
+            // 1. Profile
+            const profileRes = await fetch(`/api/v1/datasets/${currentDatasetId}/profile`);
+            const profileData = await profileRes.json();
+            
+            document.getElementById('statDuplicates').textContent = profileData.missing?.duplicated_rows || 0;
+            
+            // Insights list
+            const insightsList = document.getElementById('insightsList');
+            insightsList.innerHTML = '';
+            (profileData.observations || []).forEach(obs => {
+                const li = document.createElement('li');
+                li.className = 'flex items-start space-x-2 bg-zinc-950 p-3 rounded-lg border border-zinc-900';
+                li.innerHTML = `<span class="text-indigo-400 font-mono">▸</span><span>${obs}</span>`;
+                insightsList.appendChild(li);
+            });
+
+            // 2. Charts JSON
+            const chartsRes = await fetch(`/api/v1/datasets/${currentDatasetId}/charts?top=${top}`);
+            const chartsData = await chartsRes.json();
+
+            currentChartsData = chartsData.charts || [];
+            document.getElementById('statChartsCount').textContent = currentChartsData.length;
+
+            renderChartsGrid();
+
+            // Hide loader, show dashboard
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
+        }
+
+        function renderChartsGrid() {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = '';
+
+            const filteredCharts = currentChartsData.filter(c => {
+                if (currentFilter === 'all') return true;
+                return c.type === currentFilter;
+            });
+
+            if (filteredCharts.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-12 text-center text-zinc-500 font-mono">Графиков с выбранным фильтром не найдено</div>`;
+                return;
+            }
+
+            filteredCharts.forEach((chart, idx) => {
+                const card = document.createElement('div');
+                card.className = 'glass-card rounded-xl p-5 border border-zinc-800 flex flex-col justify-between overflow-hidden min-w-0 relative';
+                
+                const cardHeader = `
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                            <h4 class="font-semibold text-white text-base truncate">${chart.title}</h4>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-zinc-900 border border-zinc-800 text-indigo-400 shrink-0">${chart.type}</span>
+                        </div>
+                        <p class="text-xs text-zinc-400 line-clamp-2">${chart.reason}</p>
+                    </div>
+                `;
+
+                const chartDivId = `plotly-chart-${idx}`;
+                const chartContainer = `<div id="${chartDivId}" class="w-full h-[400px] bg-black/50 rounded border border-zinc-900/80 overflow-hidden"></div>`;
+
+                card.innerHTML = cardHeader + chartContainer;
+                container.appendChild(card);
+
+                // Render Plotly Chart
+                if (chart.plotly_json) {
+                    const figure = JSON.parse(JSON.stringify(chart.plotly_json));
+                    
+                    // Удаляем дублирующий заголовок внутри SVG канваса
+                    delete figure.layout.title;
+                    delete figure.layout.height;
+                    delete figure.layout.width;
+                    
+                    figure.layout.autosize = true;
+                    figure.layout.paper_bgcolor = 'rgba(0,0,0,0)';
+                    figure.layout.plot_bgcolor = 'rgba(0,0,0,0)';
+                    figure.layout.margin = { l: 55, r: 25, t: 25, b: 85 };
+
+                    Plotly.newPlot(chartDivId, figure.data, figure.layout, { 
+                        responsive: true, 
+                        displayModeBar: false 
+                    });
+                }
+            });
+        }
+
+
+        function renderPreviewTable(columns, rows) {
+            const head = document.getElementById('previewTableHead');
+            const body = document.getElementById('previewTableBody');
+
+            head.innerHTML = columns.map(c => `<th class="px-4 py-3">${c}</th>`).join('');
+            body.innerHTML = rows.map(r => {
+                return `<tr>${columns.map(c => `<td class="px-4 py-2 border-t border-zinc-900">${r[c] !== undefined ? r[c] : ''}</td>`).join('')}</tr>`;
+            }).join('');
+        }
+
+        async function updateTopCharts(val) {
+            document.getElementById('topRangeValue').textContent = val;
+            if (currentDatasetId) {
+                document.getElementById('loader').classList.remove('hidden');
+                document.getElementById('dashboardSection').classList.add('hidden');
+                await fetchProfileAndCharts();
+            }
+        }
+
+        function filterChartType(type) {
+            currentFilter = type;
+            document.querySelectorAll('.chart-filter-btn').forEach(btn => {
+                btn.className = 'chart-filter-btn px-3 py-1 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white';
+            });
+            event.target.className = 'chart-filter-btn active px-3 py-1 rounded-md bg-indigo-600 text-white font-medium';
+            renderChartsGrid();
+        }
+
+        function switchTab(tabName) {
+            ['charts', 'insights', 'preview'].forEach(t => {
+                document.getElementById(`tabContent-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`tabBtn-${t}`);
+                btn.classList.remove('border-indigo-500', 'text-indigo-400');
+                btn.classList.add('border-transparent', 'text-zinc-400');
+            });
+
+            document.getElementById(`tabContent-${tabName}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tabBtn-${tabName}`);
+            activeBtn.classList.remove('border-transparent', 'text-zinc-400');
+            activeBtn.classList.add('border-indigo-500', 'text-indigo-400');
+        }
+
+        function exportHtmlReport() {
+            if (!currentDatasetId) return;
+            window.open(`/api/v1/datasets/${currentDatasetId}/export/html`, '_blank');
+        }
+    </script>
+</body>
+</html>
