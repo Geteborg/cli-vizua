@@ -2,6 +2,7 @@ import plotly.express as px
 import pandas as pd
 from pathlib import Path
 import typer
+import json
 
 def render_charts(df: pd.DataFrame, candidates: list[dict], output_dir: Path) -> list[dict]:
     """
@@ -37,13 +38,15 @@ def render_charts(df: pd.DataFrame, candidates: list[dict], output_dir: Path) ->
                 fig = px.scatter(df, x=x, y=y, title=title)
             
             if fig:
-                # Применяем темную тему и прозрачность для интеграции в дашборд
+                # Применяем темную тему, прозрачность и поля для предотвращения переполнения
                 fig.update_layout(
                     template="plotly_dark",
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(0,0,0,0)',
                     font=dict(family="Inter, sans-serif", color="#ececec"),
-                    title_font=dict(size=18, family="Inter, sans-serif")
+                    title_font=dict(size=16, family="Inter, sans-serif"),
+                    margin=dict(l=55, r=25, t=35, b=85),
+                    autosize=True
                 )
                 
                 clean_title = "".join([c if c.isalnum() else "_" for c in title]).lower()
@@ -61,6 +64,66 @@ def render_charts(df: pd.DataFrame, candidates: list[dict], output_dir: Path) ->
                 
         except Exception as e:
             typer.echo(f"Ошибка при отрисовке '{title}': {e}", err=True)
+
+    return results
+
+
+def render_charts_to_json(df: pd.DataFrame, candidates: list[dict]) -> list[dict]:
+    """
+    Генерирует структуры Plotly в формате Python dict (JSON-совместимые) для REST API.
+    """
+    results = []
+
+    for index, candidate in enumerate(candidates, start=1):
+        chart_type = candidate["chart_type"]
+        x = candidate["x"]
+        y = candidate["y"]
+        title = candidate["title"]
+        reason = candidate["reason"]
+        
+        fig = None
+        
+        try:
+            if chart_type == "bar":
+                if y:
+                    plot_df = df.groupby(x, observed=True)[y].mean().reset_index()
+                    fig = px.bar(plot_df, x=x, y=y, title=title)
+                else:
+                    fig = px.bar(df, x=x, title=title)
+            
+            elif chart_type == "histogram":
+                fig = px.histogram(df, x=x, title=title)
+            
+            elif chart_type == "boxplot":
+                fig = px.box(df, y=x, title=title)
+            
+            elif chart_type == "scatter":
+                fig = px.scatter(df, x=x, y=y, title=title)
+            
+            if fig:
+                fig.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(family="Inter, sans-serif", color="#ececec"),
+                    title_font=dict(size=16, family="Inter, sans-serif"),
+                    margin=dict(l=55, r=25, t=25, b=85),
+                    autosize=True
+                )
+                
+                results.append({
+                    "id": f"chart_{index}",
+                    "title": title,
+                    "reason": reason,
+                    "type": chart_type,
+                    "x": x,
+                    "y": y,
+                    "score": int(candidate.get("score", 0)),
+                    "plotly_json": json.loads(fig.to_json())
+                })
+                
+        except Exception as e:
+            typer.echo(f"Ошибка при генерации JSON для '{title}': {e}", err=True)
 
     return results
 
