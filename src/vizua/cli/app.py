@@ -59,6 +59,52 @@ def ui(
 
     uvicorn.run("vizua.web.api:app", host=host, port=port, log_level="info")
 
+@app.command()
+def ask(
+    path: Path,
+    question: str,
+    provider: str = typer.Option("auto", help="Провайдер ИИ: auto, openai, mistral, ollama"),
+    model: str = typer.Option(None, help="Модель ИИ (например gpt-4o-mini, mistral-small, llama3)"),
+    api_key: str = typer.Option(None, help="API-ключ (если не задан в переменной окружения)")
+):
+    """Задать вопрос к данным на естественном языке и сгенерировать график."""
+    from vizua.infrastructure.readers.csv_reader import read_csv_file
+    from vizua.services.ai.ai_service import AIService
+    from vizua.services.vizualization.chart_render import render_charts
+
+    try:
+        df = read_csv_file(str(path))
+    except Exception as e:
+        typer.echo(f"Ошибка чтения файла: {e}")
+        raise typer.Exit(code=1)
+
+    typer.echo(f"🤖 Обработка запроса ИИ через провайдер [{provider}]...")
+    try:
+        candidate = AIService.query_chart_from_text(
+            df=df,
+            user_query=question,
+            provider_name=provider,
+            api_key=api_key,
+            model=model
+        )
+
+        output_dir = Path("./charts") / f"{path.stem}_ai_chart"
+        rendered = render_charts(df, [candidate], output_dir)
+
+        if rendered:
+            typer.echo(f"\n✅ ИИ успешно сгенерировал график!")
+            typer.echo(f"   Тип графика: {candidate.get('chart_type')}")
+            typer.echo(f"   X: {candidate.get('x')}, Y: {candidate.get('y')}")
+            typer.echo(f"   Заголовок: {candidate.get('title')}")
+            typer.echo(f"   Причина: {candidate.get('reason')}")
+            typer.echo(f"📂 Файл сохранен: {(output_dir / rendered[0]['file_name']).absolute()}")
+        else:
+            typer.echo("⚠️ Не удалось отрисовать график.")
+    except Exception as e:
+        typer.echo(f"❌ Ошибка ИИ-генерации: {e}")
+        raise typer.Exit(code=1)
+
 if __name__ == "__main__":
     app()
+
 

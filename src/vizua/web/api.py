@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
 from vizua.web.endpoints import router as api_router
+from vizua.web.endpoints_ai import router as api_ai_router
 
 app = FastAPI(
     title="vizua Web API",
@@ -23,6 +24,8 @@ app.add_middleware(
 
 # Подключаем API эндпоинты
 app.include_router(api_router)
+app.include_router(api_ai_router)
+
 
 # Путь к статическому веб-интерфейсу
 STATIC_DIR = Path(__file__).parent / "static"

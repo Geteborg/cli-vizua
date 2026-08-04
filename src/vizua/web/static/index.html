@@ -68,6 +68,36 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #444;
         }
+        /* Toast */
+        #toastNotification {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9999;
+            transform: translateY(120%);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+        #toastNotification.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        /* Skeleton pulse */
+        @keyframes skeletonPulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+        }
+        .skeleton {
+            animation: skeletonPulse 1.5s ease-in-out infinite;
+            background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+            border-radius: 6px;
+        }
+        /* AI query history chip */
+        .query-chip:hover {
+            border-color: #6366f1;
+            color: #a5b4fc;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col bg-black text-gray-100">
@@ -87,6 +117,11 @@
 
             <!-- Header Actions -->
             <div id="headerActions" class="flex items-center space-x-3">
+                <button onclick="toggleAiModal(true)" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-indigo-400 transition flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                    <span>ИИ-Провайдер</span>
+                    <span id="providerBadge" class="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-zinc-800 text-zinc-400 border border-zinc-700">auto</span>
+                </button>
                 <button onclick="triggerFileInput()" class="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center space-x-2 shadow-sm">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                     <span>Загрузить CSV</span>
@@ -95,6 +130,51 @@
             </div>
         </div>
     </header>
+
+    <!-- AI Settings Modal -->
+    <div id="aiModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl max-w-md w-full p-6 border border-zinc-800 shadow-2xl relative">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center space-x-2">
+                    <span>🤖 Настройки ИИ-провайдера</span>
+                </h3>
+                <button onclick="toggleAiModal(false)" class="text-zinc-400 hover:text-white">&times;</button>
+            </div>
+            
+            <div class="space-y-4 text-xs">
+                <div>
+                    <label class="block text-zinc-400 mb-1">Выбор ИИ-провайдера</label>
+                    <select id="aiProviderSelect" onchange="handleProviderChange()" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="auto">⚡ Автовыбор (Ollama -> OpenAI -> Mistral)</option>
+                        <option value="ollama">🦙 Ollama (Локально)</option>
+                        <option value="openai">🔮 OpenAI API (GPT-4o)</option>
+                        <option value="mistral">🌪️ Mistral API</option>
+                    </select>
+                </div>
+
+                <div id="apiKeyGroup">
+                    <label class="block text-zinc-400 mb-1">API Ключ</label>
+                    <input type="password" id="aiApiKeyInput" placeholder="sk-..." class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white font-mono focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-zinc-400 mb-1">Модель (необязательно)</label>
+                    <input type="text" id="aiModelInput" placeholder="gpt-4o-mini / mistral-small / llama3" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2.5 text-white font-mono focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <div id="ollamaStatusBox" class="p-3 rounded-lg bg-zinc-950 border border-zinc-900 text-zinc-400 font-mono text-[11px]">
+                    Статус Ollama: <span id="ollamaStatusText">Проверка...</span>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button onclick="saveAiSettings()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition text-xs">
+                    Сохранить настройки
+                </button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Main Content Area -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -191,6 +271,24 @@
 
             <!-- Tab Content: Charts -->
             <div id="tabContent-charts" class="space-y-6">
+                
+                <!-- AI Natural Language Query Bar -->
+                <div class="glass-card p-4 rounded-xl border border-indigo-900/50 bg-gradient-to-r from-zinc-950 via-indigo-950/20 to-zinc-950">
+                    <form onsubmit="handleAiChartQuery(event)" class="flex flex-col sm:flex-row gap-3">
+                        <div class="relative flex-grow">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-indigo-400">
+                                💬
+                            </span>
+                            <input type="text" id="aiQueryInput" placeholder="Задайте вопрос ИИ (например: Сделай график зависимости зарплаты от возраста)..." class="w-full pl-10 pr-4 py-2.5 bg-black/60 border border-zinc-800 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition">
+                        </div>
+                        <button type="submit" id="aiQueryBtn" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition flex items-center justify-center space-x-2 shrink-0">
+                            <span>Сгенерировать ИИ-график</span>
+                        </button>
+                    </form>
+                    <!-- Query History chips -->
+                    <div id="queryHistory" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+                </div>
+
                 <!-- Controls bar -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-950 p-4 rounded-xl border border-zinc-900">
                     <div class="flex items-center space-x-4">
@@ -218,13 +316,31 @@
             <!-- Tab Content: AI Insights -->
             <div id="tabContent-insights" class="hidden space-y-6">
                 <div class="glass-card rounded-xl p-6 border border-zinc-800">
-                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
-                        <span>Выявленные наблюдения и закономерности</span>
-                    </h3>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-zinc-900">
+                        <h3 class="text-lg font-semibold text-white flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                            <span>Выявленные наблюдения</span>
+                        </h3>
+                        <button onclick="generateLlmInsights()" id="generateAiInsightsBtn" class="px-4 py-2 bg-indigo-950/80 border border-indigo-800/60 hover:bg-indigo-900 text-indigo-300 rounded-lg text-xs font-medium transition flex items-center space-x-2">
+                            <span>✨ Глубокий ИИ-анализ</span>
+                        </button>
+                    </div>
+                    <!-- Skeleton (shown during LLM loading) -->
+                    <div id="insightsSkeleton" class="hidden space-y-3">
+                        <div class="skeleton h-12 w-full"></div>
+                        <div class="skeleton h-12 w-5/6"></div>
+                        <div class="skeleton h-12 w-4/6"></div>
+                        <div class="skeleton h-12 w-full"></div>
+                        <div class="skeleton h-12 w-3/4"></div>
+                    </div>
                     <ul id="insightsList" class="space-y-3 text-sm text-zinc-300">
                         <!-- Dynamic list -->
                     </ul>
+                    <!-- AI source badge -->
+                    <div id="insightsAiBadge" class="hidden mt-4 pt-4 border-t border-zinc-900 flex items-center space-x-2 text-xs text-zinc-500">
+                        <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                        <span id="insightsAiBadgeText">Сгенерировано ИИ</span>
+                    </div>
                 </div>
             </div>
 
@@ -244,6 +360,12 @@
         </div>
 
     </main>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="bg-zinc-900 border border-zinc-700 text-white text-xs font-medium rounded-xl px-5 py-3 shadow-2xl flex items-center space-x-3 max-w-xs">
+        <span id="toastIcon" class="text-base">✅</span>
+        <span id="toastText">Готово</span>
+    </div>
 
     <!-- Footer -->
     <footer class="border-t border-brand-border py-6 mt-12 bg-black text-center text-xs text-zinc-600 font-mono">
@@ -467,6 +589,235 @@
             if (!currentDatasetId) return;
             window.open(`/api/v1/datasets/${currentDatasetId}/export/html`, '_blank');
         }
+
+        // --- AI Settings & Text-to-Viz Logic ---
+        let aiSettings = {
+            provider: localStorage.getItem('vizua_ai_provider') || 'auto',
+            apiKey: localStorage.getItem('vizua_ai_key') || '',
+            model: localStorage.getItem('vizua_ai_model') || ''
+        };
+        let queryHistoryList = JSON.parse(localStorage.getItem('vizua_query_history') || '[]');
+
+        // --- Toast ---
+        let toastTimeout = null;
+        function showToast(text, icon = '✅', duration = 2800) {
+            const el = document.getElementById('toastNotification');
+            document.getElementById('toastText').textContent = text;
+            document.getElementById('toastIcon').textContent = icon;
+            el.classList.add('visible');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => el.classList.remove('visible'), duration);
+        }
+
+        function updateProviderBadge() {
+            const badge = document.getElementById('providerBadge');
+            const labels = { auto: 'auto', openai: 'OpenAI', mistral: 'Mistral', ollama: 'Ollama' };
+            const colors = {
+                auto: 'bg-zinc-800 text-zinc-400 border-zinc-700',
+                openai: 'bg-emerald-950 text-emerald-400 border-emerald-800',
+                mistral: 'bg-orange-950 text-orange-400 border-orange-800',
+                ollama: 'bg-sky-950 text-sky-400 border-sky-800'
+            };
+            badge.textContent = labels[aiSettings.provider] || aiSettings.provider;
+            badge.className = `px-1.5 py-0.5 rounded-md text-[10px] font-mono border ${colors[aiSettings.provider] || colors.auto}`;
+        }
+
+        function initAiSettingsUI() {
+            document.getElementById('aiProviderSelect').value = aiSettings.provider;
+            document.getElementById('aiApiKeyInput').value = aiSettings.apiKey;
+            document.getElementById('aiModelInput').value = aiSettings.model;
+            checkOllamaStatus();
+        }
+
+        function toggleAiModal(show) {
+            const modal = document.getElementById('aiModal');
+            if (show) {
+                initAiSettingsUI();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function handleProviderChange() {
+            const val = document.getElementById('aiProviderSelect').value;
+            const keyGroup = document.getElementById('apiKeyGroup');
+            if (val === 'ollama') {
+                keyGroup.classList.add('hidden');
+            } else {
+                keyGroup.classList.remove('hidden');
+            }
+        }
+
+        function saveAiSettings() {
+            aiSettings.provider = document.getElementById('aiProviderSelect').value;
+            aiSettings.apiKey = document.getElementById('aiApiKeyInput').value.trim();
+            aiSettings.model = document.getElementById('aiModelInput').value.trim();
+
+            localStorage.setItem('vizua_ai_provider', aiSettings.provider);
+            localStorage.setItem('vizua_ai_key', aiSettings.apiKey);
+            localStorage.setItem('vizua_ai_model', aiSettings.model);
+
+            updateProviderBadge();
+            toggleAiModal(false);
+            showToast('Настройки ИИ сохранены', '✅');
+        }
+
+        // --- Query History ---
+        function addQueryToHistory(query) {
+            queryHistoryList = [query, ...queryHistoryList.filter(q => q !== query)].slice(0, 6);
+            localStorage.setItem('vizua_query_history', JSON.stringify(queryHistoryList));
+            renderQueryHistory();
+        }
+
+        function renderQueryHistory() {
+            const container = document.getElementById('queryHistory');
+            if (!container) return;
+            container.innerHTML = queryHistoryList.map(q =>
+                `<button onclick="document.getElementById('aiQueryInput').value='${q.replace(/'/g, '')}'" class="query-chip px-2.5 py-1 text-[11px] font-mono rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 transition truncate max-w-[200px]" title="${q}">${q}</button>`
+            ).join('');
+        }
+
+        async function checkOllamaStatus() {
+            const statusEl = document.getElementById('ollamaStatusText');
+            try {
+                const res = await fetch('/api/v1/ai/providers');
+                const providers = await res.json();
+                const ollama = providers.find(p => p.id === 'ollama');
+                if (ollama && ollama.is_available) {
+                    const models = (ollama.local_models || []).join(', ') || 'Запущен';
+                    statusEl.textContent = `🟢 Доступен (${models})`;
+                    statusEl.className = 'text-green-400 font-bold';
+                } else {
+                    statusEl.textContent = '🔴 Не доступен (localhost:11434)';
+                    statusEl.className = 'text-zinc-500';
+                }
+            } catch (e) {
+                statusEl.textContent = 'Ошибка соединения';
+                statusEl.className = 'text-red-400';
+            }
+        }
+
+        async function handleAiChartQuery(e) {
+            e.preventDefault();
+            const input = document.getElementById('aiQueryInput');
+            const btn = document.getElementById('aiQueryBtn');
+            const query = input.value.trim();
+
+            if (!query) return;
+            if (!currentDatasetId) {
+                alert('Сначала загрузите CSV-файл датасета!');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin mr-1">🌀</span> Генерация ИИ...';
+
+            try {
+                const res = await fetch(`/api/v1/ai/datasets/${currentDatasetId}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        provider: aiSettings.provider,
+                        api_key: aiSettings.apiKey || null,
+                        model: aiSettings.model || null
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Ошибка ИИ-генерации');
+                }
+
+                const data = await res.json();
+                const aiChart = data.chart;
+
+                // Помечаем как сгенерированный ИИ
+                aiChart.title = `✨ [ИИ] ${aiChart.title}`;
+                aiChart.reason = `Запрос: "${query}" | ${aiChart.reason}`;
+
+                currentChartsData.unshift(aiChart);
+                renderChartsGrid();
+                addQueryToHistory(query);
+                input.value = '';
+                showToast('График успешно сгенерирован', '✨');
+
+            } catch (err) {
+                showToast(err.message, '❌', 4000);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Сгенерировать ИИ-график</span>';
+            }
+        }
+
+        async function generateLlmInsights() {
+            if (!currentDatasetId) return;
+
+            const btn = document.getElementById('generateAiInsightsBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin">🌀</span> ИИ анализирует...';
+
+            try {
+                const res = await fetch(`/api/v1/ai/datasets/${currentDatasetId}/insights`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        provider: aiSettings.provider,
+                        api_key: aiSettings.apiKey || null,
+                        model: aiSettings.model || null
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Ошибка получения ИИ-инсайтов');
+                }
+
+                const data = await res.json();
+                const insightsList = document.getElementById('insightsList');
+                insightsList.innerHTML = '';
+                document.getElementById('insightsSkeleton').classList.add('hidden');
+
+                (data.insights || []).forEach(obs => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-start space-x-3 bg-gradient-to-r from-indigo-950/40 to-zinc-950 p-3.5 rounded-lg border border-indigo-900/40 hover:border-indigo-700/60 transition';
+                    li.innerHTML = `<span class="text-indigo-400 font-mono mt-0.5 shrink-0">✦</span><span class="text-zinc-200">${obs}</span>`;
+                    insightsList.appendChild(li);
+                });
+
+                const badge = document.getElementById('insightsAiBadge');
+                const badgeText = document.getElementById('insightsAiBadgeText');
+                const providerLabels = { auto: 'авто', openai: 'OpenAI', mistral: 'Mistral', ollama: 'Ollama' };
+                badgeText.textContent = `Сгенерировано ИИ · ${providerLabels[aiSettings.provider] || aiSettings.provider}${aiSettings.model ? ' · ' + aiSettings.model : ''}`;
+                badge.classList.remove('hidden');
+                showToast('ИИ-анализ готов', '✨');
+
+            } catch (err) {
+                document.getElementById('insightsSkeleton').classList.add('hidden');
+                showToast(err.message, '❌', 4000);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>✨ Глубокий ИИ-анализ</span>';
+            }
+        }
+
+        // Show skeleton during LLM loading
+        const _origGenerateLlm = generateLlmInsights;
+        generateLlmInsights = async function() {
+            document.getElementById('insightsSkeleton').classList.remove('hidden');
+            document.getElementById('insightsList').innerHTML = '';
+            document.getElementById('insightsAiBadge').classList.add('hidden');
+            return _origGenerateLlm();
+        };
+
+        // Initial boot
+        window.addEventListener('DOMContentLoaded', () => {
+            checkOllamaStatus();
+            updateProviderBadge();
+            renderQueryHistory();
+        });
     </script>
 </body>
 </html>
+
